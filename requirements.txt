@@ -1,0 +1,39 @@
+# ------------------------------------------------------------
+# This is a requirements file for the Ladies Products Price Sorter project.
+# It lists all the dependencies required to run the project.
+# ------------------------------------------------------------
+
+# > It includes all the necessary libraries and their versions to run the project smoothly.
+#   You can install all the required packages using the following command:
+#   pip install -U -r requirements.txt
+
+# > Make sure to create a virtual environment before installing the packages.
+#   Create a virtual environment:
+#   cd ./backend/
+#   python -m venv venv
+
+# > Activate the virtual environment:
+#   Windows: venv\Scripts\activate
+#   Linux/Mac: source venv/bin/activate
+
+# > For Unauthorized access, use: 
+#   Set-ExecutionPolicy Unrestricted -Scope CurrentUser
+
+# > The following libraries are required for the project:
+#   - fastapi: For building the web application.
+#   - uvicorn: For running the FastAPI application.
+#   - python-dotenv: For loading environment variables from a .env file.
+#   - pydantic: For data validation and settings management.
+#   - selenium: For automating web browser interaction.
+#   - webdriver-manager: For managing web drivers for Selenium.
+#   - redis: For caching and storing data.
+#   - httpx: For making HTTP requests.
+
+fastapi
+uvicorn
+python-dotenv
+pydantic
+selenium
+webdriver-manager
+redis
+httpx
