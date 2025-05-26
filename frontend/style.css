@@ -29,7 +29,6 @@ body {
 
 /* Header */
 .header {
-  height: 60px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -42,7 +41,20 @@ body {
 }
 
 .logo {
-  height: 50px;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #D14D72;
+  text-shadow:
+    0 0 5px #D14D72,
+    0 0 10px #FFABAB,
+    0 0 20px #FFABAB;
+  text-decoration: none;
+  font-family: 'Poppins', sans-serif;
+  transition: transform 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
 }
 
 .nav a {
