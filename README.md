@@ -32,10 +32,9 @@ It enables users to **search** for a product, **compare prices** across platform
 |-------------|--------------------------|
 | Frontend    | HTML, CSS, JavaScript    |
 | Backend     | Python, FastAPI          |
-| Scraping    | `requests`, `BeautifulSoup4`, `lxml`, `fake_useragent`, `httpx` |
+| Scraping    | `requests`, `selenium`, `lxml`, `fake_useragent`, `httpx` |
 | Matching    | NLP / Regex / String Similarity |
 | Deployment  | Vercel / Render / Heroku |
-| Optional    | Redis (cache), SQLite/Postgres (history), Celery (scheduling) |
 
 ---
 
