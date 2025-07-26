@@ -17,7 +17,7 @@ Develop a web application that scrapes multiple e-commerce sites (Amazon, Flipka
 
 **Deliverables:** 
 - Project repository with directory structure
-- Initial documentation (`README.md`, `PROJECT_PLAN.md`)
+- Initial documentation (`README.md`)
 
 ---
 
@@ -103,16 +103,3 @@ Develop a web application that scrapes multiple e-commerce sites (Amazon, Flipka
 - Mobile-friendly or app version
 - Support for more sites
 - Real-time scraping scheduler via Celery or CRON
-
----
-
-## Team & Responsibilities
-
-| Task               | Owner | Notes                              |
-|--------------------|--------|-------------------------------------|
-| Scraping Logic     | Self   | Rotate IPs to avoid blocks         |
-| API Development    | Self   | Use FastAPI for async support      |
-| Frontend Design    | Self   | Focus on UX simplicity             |
-| Testing            | Self   | Use unittest or PyTest             |
-| Deployment         | Self   | Free tier hosting to start         |
-
