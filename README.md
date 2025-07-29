@@ -6,7 +6,7 @@
 ![Build](https://img.shields.io/badge/build-MVP-informational?style=flat-square)
 ![Tech Stack](https://img.shields.io/badge/stack-FastAPI%2C%20Python-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-
+❌THIS PROJECT HAS BEEN DROPPED❌
 ---
 
 ## 🚀 Project Objective
