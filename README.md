@@ -12,7 +12,7 @@
 ## 🚀 Project Objective
 
 **Ladies Product Price Sorter** is a smart price comparison tool tailored specifically for fashion and cosmetic products for women in India.  
-It enables users to **search** for a product, **compare prices** across platforms like Amazon, Flipkart, Myntra, Nykaa, etc., and **redirect** to the best deal with a click.
+It enables users to **search** for a product, **compare prices** across platforms like Amazon, Flipkart, Myntra, Nykaa, etc.
 
 ---
 
