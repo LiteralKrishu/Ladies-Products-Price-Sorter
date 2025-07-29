@@ -1,5 +1,35 @@
+# .gitignore
+# Python
 __pycache__/
-*.pyc
-.env
+*.py[cod]
+*.egg-info/
+*.swp
+.python-version
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log
+
+# Logs
+logs/
 *.log
+
+# Environment
+.env
+.env.local
+
+# IDE
 .vscode/
+.idea/
+
+# Build
+dist/
+build/
+*.min.js
+*.min.css
+
+# Database
+*.db
+*.sqlite

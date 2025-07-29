@@ -6,7 +6,7 @@
 ![Build](https://img.shields.io/badge/build-MVP-informational?style=flat-square)
 ![Tech Stack](https://img.shields.io/badge/stack-FastAPI%2C%20Python-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-❌THIS PROJECT HAS BEEN DROPPED❌
+
 ---
 
 ## 🚀 Project Objective
@@ -22,7 +22,6 @@ It enables users to **search** for a product, **compare prices** across platform
 2. **Backend Trigger** → Scrapes e-commerce platforms  
 3. **Data Normalization** → Product Matching Engine  
 4. **Response API** → Matched Products with Price Comparison  
-5. **Frontend UI** → Interactive sortable display  
 
 ---
 
@@ -30,11 +29,10 @@ It enables users to **search** for a product, **compare prices** across platform
 
 | Layer       | Technology              |
 |-------------|--------------------------|
-| Frontend    | HTML, CSS, JavaScript    |
 | Backend     | Python, FastAPI          |
-| Scraping    | `requests`, `selenium`, `lxml`, `fake_useragent`, `httpx` |
-| Matching    | NLP / Regex / String Similarity |
-| Deployment  | Vercel / Render / Heroku |
+| Scraping    | `requests`, `playwright`, `lxml`, `fake_useragent`, `httpx` |
+| Matching    | Sentence-Transformers, Fuzzy Matching |
+| Deployment  | Docker / GitHub Actions / Prometheus |
 
 ---
 
@@ -85,18 +83,7 @@ It enables users to **search** for a product, **compare prices** across platform
 
 ---
 
-### 🎨 Phase 5: Frontend UI
-
-- Clean, responsive interface  
-- Search bar → Results in card/grid layout  
-- Price comparison with highlights  
-- "Buy Now" button opens product in new tab  
-📁 Deliverables:  
-`/frontend/index.html`, `main.js`, `styles.css`
-
----
-
-### 🔬 Phase 6: Testing & Optimization
+### 🔬 Phase 5: Testing & Optimization
 
 - Full workflow testing (query → result)  
 - Timeout handling, retries, invalid input support  
@@ -106,39 +93,17 @@ Working MVP with logs, error states, test data
 
 ---
 
-### 🚢 Phase 7: Deployment & Docs
+## 🧪 API Endpoint
 
-- Deploy full-stack project  
-- Setup CORS, domain routing  
-- Write final documentation  
-📁 Deliverables:  
-Live link, `README.md`, contribution guide, `requirements.txt`
+### Product Search
+`GET /api/search`
 
----
+**Parameters**:
+- `q` (required): Search query (e.g., "maybelline foundation")
+- `platforms` (optional): Comma-separated platforms (e.g., "amazon,nykaa")
+- `limit` (optional): Max results per platform (default: 5)
 
-## 🌟 Optional Enhancements (Post-MVP)
+**Example**:
+```bash
+curl "http://localhost:8000/api/search?q=lakme+lips&platforms=amazon,myntra&limit=3"
 
-- 🔔 **Alerts**: Price drop SMS/Email alerts  
-- 📲 **Mobile-first UI**  
-- 💼 **User Dashboard** with history  
-- 🕒 **Scheduler**: Periodic scraping via Celery/CRON  
-- 📊 **Analytics**: Product trends, price patterns  
-- 📈 **Historical Graphs** (price over time)
-
----
-
-## 🧪 Sample API Response
-
-```json
-[
-  {
-    "title": "Maybelline Fit Me Foundation - 120 Classic Ivory",
-    "price": 449,
-    "discount": "10%",
-    "rating": 4.4,
-    "platform": "Amazon",
-    "image_url": "https://...",
-    "product_link": "https://..."
-  },
-  ...
-]
