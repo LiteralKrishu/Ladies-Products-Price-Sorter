@@ -38,7 +38,7 @@ It enables users to **search** for a product, **compare prices** across platform
 
 ## 🗂 Project Phases & Deliverables
 
-### ✅ Phase 1: Planning & Architecture
+### Phase 1: Planning & Architecture
 - Define core features
 - Setup GitHub repo & directory structure  
 📁 Deliverables:  
@@ -46,7 +46,7 @@ It enables users to **search** for a product, **compare prices** across platform
 
 ---
 
-### ✅ Phase 2: Web Scraping Modules
+### Phase 2: Web Scraping Modules
 
 - Scrapers for:
   - Amazon
