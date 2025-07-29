@@ -1,61 +1,49 @@
-from core.scraper_base import ScraperBase
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from lxml import html
+from .base_scraper import BaseScraper
 
-class AjioScraper(ScraperBase):
-    def scrape(self, query: str):
-        search_query = query.replace(" ", "%20")
-        url = f"https://www.ajio.com/search/?text={search_query}"
-
-        try:
-            self._init_driver_with_retries(url)
-
-            wait = WebDriverWait(self.driver, 15)
-            product_cards = wait.until(EC.presence_of_all_elements_located(
-                (By.CSS_SELECTOR, "div.item")
-            ))
-
-            results = []
-            for card in product_cards[:10]:
-                try:
-                    title = self.extract_element(card, "div.nameCls")
-                    price = self.extract_element(card, "div.price span")
-
-                    discount_raw = self.extract_element(card, "span.discount", optional=True)
-                    discount = self.parse_discount(discount_raw)
-
-                    rating_raw = self.extract_element(card, "span.rating", optional=True)
-                    rating = self.parse_rating(rating_raw)
-
-                    delivery = self.extract_element(card, "span.days", optional=True)
-                    availability = "In Stock"
-
-                    image_url = self.extract_attribute(card, "img", "src", optional=True) or \
-                                self.extract_attribute(card, "img", "data-src", optional=True)
-
-                    product_link = self.extract_attribute(card, "a", "href", optional=True)
-                    if product_link and not product_link.startswith("http"):
-                        product_link = f"https://www.ajio.com{product_link}"
-
-                    results.append({
-                        "title": title,
-                        "price": price,
-                        "discount": discount,
-                        "rating": rating,
-                        "delivery_time": delivery,
-                        "availability": availability,
-                        "image_url": image_url,
-                        "product_link": product_link,
-                    })
-
-                except Exception:
-                    continue  # Skip malformed entries
-
-            self.cleanup(success=True)
-            return results
-
-        except Exception as e:
-            print(f"[ERROR] Ajio scraper failed: {e}")
-            self.cleanup(success=False)
+class AjioScraper(BaseScraper):
+    PLATFORM = "ajio"
+    BASE_URL = "https://www.ajio.com/search/?text={query}"
+    
+    @classmethod
+    async def scrape_products(cls, query: str) -> List[dict]:
+        url = cls.BASE_URL.format(query=query.replace(" ", "%20"))
+        html_content = await cls._fetch_html(url)
+        if not html_content:
             return []
+            
+        tree = html.fromstring(html_content)
+        products = []
+        
+        for item in tree.xpath('//div[contains(@class, "item rilrtl-products-list__item")]'):
+            try:
+                title = cls._clean_text("".join(item.xpath('.//div[contains(@class, "nameCls")]/text()')))
+                
+                price = cls._parse_price("".join(item.xpath('.//span[contains(@class, "price")]/text()')))
+                original_price = cls._parse_price("".join(item.xpath('.//span[contains(@class, "orginal-price")]/text()')))
+                
+                if not title or not price:
+                    continue
+                    
+                discount = None
+                if original_price and original_price > price:
+                    discount = f"{round((1 - price/original_price)*100)}%"
+                
+                rating = None  # Ajio doesn't show ratings in search results
+                
+                products.append({
+                    "title": title,
+                    "price": price,
+                    "original_price": original_price if original_price > price else None,
+                    "discount": discount,
+                    "rating": rating,
+                    "platform": cls.PLATFORM,
+                    "image_url": item.xpath('.//img[contains(@class, "rilrtl-lazy-img")]/@src')[0],
+                    "product_link": "https://www.ajio.com" + item.xpath('.//a[contains(@class, "rilrtl-products-list__link")]/@href')[0],
+                    "in_stock": not bool(item.xpath('.//span[contains(text(), "SOLD OUT")]'))
+                })
+            except Exception as e:
+                logger.error(f"Error parsing Ajio product: {str(e)}")
+                continue
+                
+        return products

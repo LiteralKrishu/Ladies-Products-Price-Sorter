@@ -1,17 +1,17 @@
+from .amazon import AmazonScraper
 from .flipkart import FlipkartScraper
-from scrapers.amazon import AmazonScraper
-from scrapers.ajio import AjioScraper
-from scrapers.jiomart import JioMartScraper
-from scrapers.myntra import MyntraScraper
-from scrapers.nykaa import NykaaScraper
-from scrapers.snapdeal import SnapdealScraper
+from .myntra import MyntraScraper
+from .nykaa import NykaaScraper
+from .ajio import AjioScraper
+from .jiomart import JiomartScraper
+from .snapdeal import SnapdealScraper
 
 __all__ = [
-    "FlipkartScraper",
-    "AmazonScraper",
-    "AjioScraper",
-    "JioMartScraper",
-    "MyntraScraper",
-    "NykaaScraper",
-    "SnapdealScraper",
+    'AmazonScraper',
+    'FlipkartScraper',
+    'MyntraScraper',
+    'NykaaScraper',
+    'AjioScraper',
+    'JiomartScraper',
+    'SnapdealScraper'
 ]

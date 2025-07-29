@@ -1,19 +1,27 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+from fastapi.responses import JSONResponse
+from typing import List, Dict, Any
 import asyncio
-
-from scrapers import (
-    FlipkartScraper, AmazonScraper, AjioScraper,
-    JioMartScraper, MyntraScraper, NykaaScraper, SnapdealScraper
+import logging
+from .config import Config
+from .models.product import Product
+from .scrapers import (
+    AmazonScraper,
+    FlipkartScraper,
+    MyntraScraper,
+    NykaaScraper,
+    AjioScraper,
+    JiomartScraper,
+    SnapdealScraper
 )
-from utils.cache import get_cache, set_cache
-from utils.price_utils import (
-    normalize_price, normalize_discount,
-    normalize_rating, normalize_delivery_time
-)
+from .utils.proxy_service import start_proxy_validator
 
-app = FastAPI(title="Ladies Product Price Sorter API")
+app = FastAPI(
+    title="Ladies Product Price Sorter API",
+    description="Compare prices across Indian e-commerce platforms",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,102 +30,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SCRAPER_CLASS_MAP = {
-    "flipkart": FlipkartScraper,
+# Platform mapping
+PLATFORM_SCRAPERS = {
     "amazon": AmazonScraper,
-    "ajio": AjioScraper,
-    "jiomart": JioMartScraper,
+    "flipkart": FlipkartScraper,
     "myntra": MyntraScraper,
     "nykaa": NykaaScraper,
-    "snapdeal": SnapdealScraper,
+    "ajio": AjioScraper,
+    "jiomart": JiomartScraper,
+    "snapdeal": SnapdealScraper
 }
 
-async def run_scraper(scraper_class, query: str):
-    scraper = scraper_class()
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, scraper.scrape, query)
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(start_proxy_validator())
 
-# Single platform scrape
-@app.get("/scrape")
-async def scrape(
-    platform: str = Query(...),
-    query: str = Query(...),
-):
-    platform = platform.lower()
-    if platform not in SCRAPER_CLASS_MAP:
-        raise HTTPException(status_code=400, detail=f"Unsupported platform: {platform}")
+@app.get("/search", response_model=List[Product])
+async def search_products(q: str, platforms: str = None):
+    if not q or len(q) < 3:
+        raise HTTPException(status_code=400, detail="Query too short")
+    
+    platform_list = platforms.split(",") if platforms else Config.get_active_platforms()
+    valid_platforms = [p for p in platform_list if p in PLATFORM_SCRAPERS and Config.PLATFORMS.get(p, False)]
+    
+    if not valid_platforms:
+        raise HTTPException(status_code=400, detail="No valid platforms specified")
+    
+    tasks = []
+    for platform in valid_platforms:
+        scraper = PLATFORM_SCRAPERS[platform]
+        tasks.append(scraper.scrape_products(q))
+    
+    results = await asyncio.gather(*tasks)
+    products = [product for platform_results in results for product in platform_results]
+    
+    return products
 
-    try:
-        results = await run_scraper(SCRAPER_CLASS_MAP[platform], query)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Scraping failed: {str(e)}")
+@app.get("/lowest", response_model=Product)
+async def get_lowest_price(q: str):
+    products = await search_products(q)
+    if not products:
+        raise HTTPException(status_code=404, detail="No products found")
+    return min(products, key=lambda x: x["price"])
 
-    return {"platform": platform, "query": query, "results": results}
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.error(f"Unexpected error: {str(exc)}")
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Internal server error"},
+    )
 
-# Aggregated scrape
-@app.get("/aggregate")
-async def aggregate_prices(
-    q: str = Query(...),
-    sort_by: Optional[str] = Query("relevance", pattern="^(price|title|relevance)$"),
-    order: Optional[str] = Query("asc", pattern="^(asc|desc)$"),
-    min_price: Optional[int] = Query(None, ge=0),
-    max_price: Optional[int] = Query(None, ge=0),
-    min_discount: int = Query(0, ge=0, le=100),
-    min_rating: float = Query(0.0, ge=0.0, le=5.0),
-    max_delivery_days: int = Query(999, ge=1),
-    availability: Optional[str] = Query(None),
-    platforms: Optional[str] = Query(None),
-):
-    cache_key = f"aggregate:{q}:{sort_by}:{order}:{min_price}:{max_price}:{min_discount}:{min_rating}:{max_delivery_days}:{availability}:{platforms}"
-    cached = get_cache(cache_key)
-    if cached:
-        return {"query": q, "results": cached, "cached": True}
-
-    if platforms:
-        requested_platforms = set(p.strip().lower() for p in platforms.split(","))
-        invalid = requested_platforms - set(SCRAPER_CLASS_MAP.keys())
-        if invalid:
-            raise HTTPException(status_code=400, detail=f"Unsupported platforms: {', '.join(invalid)}")
-    else:
-        requested_platforms = set(SCRAPER_CLASS_MAP.keys())
-
-    tasks = [run_scraper(SCRAPER_CLASS_MAP[name], q) for name in requested_platforms]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    aggregated = []
-    for result in results:
-        if isinstance(result, Exception):
-            continue
-        for item in result:
-            if "error" in item:
-                continue
-
-            price_int = normalize_price(item.get("price", ""))
-            if (min_price is not None and price_int < min_price) or (
-                max_price is not None and price_int > max_price
-            ):
-                continue
-
-            discount = normalize_discount(item.get("discount", ""))
-            rating = normalize_rating(item.get("rating", ""))
-            delivery = normalize_delivery_time(item.get("delivery_time", ""))
-            avail = item.get("availability", "").lower()
-
-            if discount < min_discount or rating < min_rating or delivery > max_delivery_days:
-                continue
-            if availability and availability.lower() != avail:
-                continue
-
-            item["price_int"] = price_int
-            aggregated.append(item)
-
-    if sort_by == "price":
-        aggregated.sort(key=lambda x: x["price_int"], reverse=(order == "desc"))
-    elif sort_by == "title":
-        aggregated.sort(key=lambda x: x["title"].lower(), reverse=(order == "desc"))
-
-    for item in aggregated:
-        item.pop("price_int", None)
-
-    set_cache(cache_key, aggregated, ttl=300)
-    return {"query": q, "results": aggregated, "cached": False}
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

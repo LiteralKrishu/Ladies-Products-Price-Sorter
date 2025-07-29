@@ -1,60 +1,46 @@
-from core.scraper_base import ScraperBase
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from lxml import html
+from .base_scraper import BaseScraper
 
-class AmazonScraper(ScraperBase):
-    def scrape(self, query: str):
-        search_query = query.replace(" ", "+")
-        url = f"https://www.amazon.in/s?k={search_query}"
-
-        try:
-            self._init_driver_with_retries(url)
-
-            wait = WebDriverWait(self.driver, 15)
-            product_cards = wait.until(EC.presence_of_all_elements_located(
-                (By.CSS_SELECTOR, "div.s-result-item[data-component-type='s-search-result']")
-            ))
-
-            results = []
-            for card in product_cards[:10]:
-                try:
-                    title = self.extract_element(card, "span.a-text-normal")
-
-                    price_whole = self.extract_element(card, "span.a-price-whole", optional=True)
-                    price_fraction = self.extract_element(card, "span.a-price-fraction", optional=True)
-                    price = f"₹{price_whole}{price_fraction}" if price_whole else ""
-
-                    discount_raw = self.extract_element(card, "span.a-letter-space + span", optional=True)
-                    discount = self.parse_discount(discount_raw)
-
-                    rating_raw = self.extract_element(card, "span.a-icon-alt", optional=True)
-                    rating = self.parse_rating(rating_raw)
-
-                    delivery = self.extract_element(card, "span.a-color-base.a-text-bold", optional=True)
-                    availability = "In Stock" if "out of stock" not in card.text.lower() else "Out of Stock"
-
-                    image_url = self.extract_attribute(card, "img.s-image", "src", optional=True)
-                    product_link = self.extract_attribute(card, "a.a-link-normal.s-no-outline", "href", optional=True)
-
-                    results.append({
-                        "title": title,
-                        "price": price,
-                        "discount": discount,
-                        "rating": rating,
-                        "delivery_time": delivery,
-                        "availability": availability,
-                        "image_url": image_url,
-                        "product_link": product_link,
-                    })
-
-                except Exception:
-                    continue
-
-            self.cleanup(success=True)
-            return results
-
-        except Exception as e:
-            print(f"[ERROR] Amazon scraper failed: {e}")
-            self.cleanup(success=False)
+class AmazonScraper(BaseScraper):
+    PLATFORM = "amazon"
+    BASE_URL = "https://www.amazon.in/s?k={query}"
+    
+    @classmethod
+    async def scrape_products(cls, query: str) -> List[dict]:
+        url = cls.BASE_URL.format(query=query.replace(" ", "+"))
+        html_content = await cls._fetch_html(url)
+        if not html_content:
             return []
+            
+        tree = html.fromstring(html_content)
+        products = []
+        
+        for item in tree.xpath('//div[contains(@data-component-type, "s-search-result")]'):
+            try:
+                title = cls._clean_text("".join(item.xpath('.//span[@class="a-size-medium a-color-base a-text-normal"]/text()')))
+                price = cls._parse_price("".join(item.xpath('.//span[@class="a-price-whole"]/text()')))
+                original_price = cls._parse_price("".join(item.xpath('.//span[@class="a-price a-text-price"]/span[2]/text()')))
+                
+                if not title or not price:
+                    continue
+                    
+                discount = None
+                if original_price and original_price > price:
+                    discount = f"{round((1 - price/original_price)*100)}%"
+                
+                products.append({
+                    "title": title,
+                    "price": price,
+                    "original_price": original_price if original_price > price else None,
+                    "discount": discount,
+                    "rating": float("".join(item.xpath('.//span[@class="a-icon-alt"]/text()')).split()[0]),
+                    "platform": cls.PLATFORM,
+                    "image_url": item.xpath('.//img[@class="s-image"]/@src')[0],
+                    "product_link": "https://amazon.in" + item.xpath('.//a[@class="a-link-normal s-no-outline"]/@href')[0],
+                    "in_stock": bool(item.xpath('.//span[contains(text(), "In Stock")]'))
+                })
+            except Exception as e:
+                logger.error(f"Error parsing Amazon product: {str(e)}")
+                continue
+                
+        return products

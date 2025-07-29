@@ -1,62 +1,49 @@
-from core.scraper_base import ScraperBase
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from lxml import html
+from .base_scraper import BaseScraper
 
-class JioMartScraper(ScraperBase):
-    def scrape(self, query: str):
-        search_query = query.replace(" ", "%20")
-        url = f"https://www.jiomart.com/catalogsearch/result?q={search_query}"
-
-        try:
-            self._init_driver_with_retries(url)
-
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "div.cat-item"))
-            )
-
-            product_cards = self.driver.find_elements(By.CSS_SELECTOR, "div.cat-item")
-
-            results = []
-            for card in product_cards[:10]:
-                try:
-                    title = self.extract_element(card, "span.clsgetname")
-                    price = self.extract_element(card, "span.price", optional=True)
-
-                    original_price = self.extract_element(card, "span.mrp", optional=True)
-                    discount = ""
-                    if price and original_price:
-                        try:
-                            p = float(price.replace('₹', '').replace(',', ''))
-                            op = float(original_price.replace('₹', '').replace(',', ''))
-                            discount_percent = round((1 - p / op) * 100)
-                            discount = f"{discount_percent}% off" if discount_percent > 0 else ""
-                        except Exception:
-                            discount = ""
-
-                    availability = "In Stock" if title else "Out of Stock"
-
-                    image_url = self.extract_attribute(card, "img.cat-image", "src", optional=True)
-                    product_link = self.extract_attribute(card, "a.cat-image", "href", optional=True)
-
-                    results.append({
-                        "title": title,
-                        "price": price,
-                        "discount": discount,
-                        "rating": "",  # JioMart does not provide listing ratings
-                        "availability": availability,
-                        "delivery_time": "",  # Not visible up front
-                        "image_url": image_url,
-                        "product_link": product_link,
-                    })
-
-                except Exception:
-                    continue
-
-            self.cleanup(success=True)
-            return results
-
-        except Exception as e:
-            print(f"[ERROR] JioMart scraper failed: {e}")
-            self.cleanup(success=False)
+class JiomartScraper(BaseScraper):
+    PLATFORM = "jiomart"
+    BASE_URL = "https://www.jiomart.com/search/{query}"
+    
+    @classmethod
+    async def scrape_products(cls, query: str) -> List[dict]:
+        url = cls.BASE_URL.format(query=query.replace(" ", "%20"))
+        html_content = await cls._fetch_html(url)
+        if not html_content:
             return []
+            
+        tree = html.fromstring(html_content)
+        products = []
+        
+        for item in tree.xpath('//div[contains(@class, "jm-col-4") and contains(@class, "product-item")]'):
+            try:
+                title = cls._clean_text("".join(item.xpath('.//a[contains(@class, "category_name")]/text()')))
+                
+                price = cls._parse_price("".join(item.xpath('.//span[contains(@class, "price")]/text()')))
+                original_price = cls._parse_price("".join(item.xpath('.//span[contains(@class, "price-old")]/text()')))
+                
+                if not title or not price:
+                    continue
+                    
+                discount = None
+                if original_price and original_price > price:
+                    discount = f"{round((1 - price/original_price)*100)}%"
+                
+                rating = None  # Jiomart doesn't show ratings in search results
+                
+                products.append({
+                    "title": title,
+                    "price": price,
+                    "original_price": original_price if original_price > price else None,
+                    "discount": discount,
+                    "rating": rating,
+                    "platform": cls.PLATFORM,
+                    "image_url": item.xpath('.//img[contains(@class, "product-image")]/@src')[0],
+                    "product_link": "https://www.jiomart.com" + item.xpath('.//a[contains(@class, "category_name")]/@href')[0],
+                    "in_stock": not bool(item.xpath('.//div[contains(text(), "Out of Stock")]'))
+                })
+            except Exception as e:
+                logger.error(f"Error parsing Jiomart product: {str(e)}")
+                continue
+                
+        return products
