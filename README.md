@@ -1,7 +1,7 @@
-# 💄 Ladies Product Price Sorter
+# 🛒 Product Price Sorter
 
-> 🛍️ An intelligent price comparison platform for women’s products in India.  
-> Scrapes top e-commerce sites, matches similar products, and displays the best price in real-time.
+> 🛍️ Price comparison API for products in India.  
+> Scrapes top e-commerce sites, matches similar products, and displays the best price.
 
 ![Build](https://img.shields.io/badge/build-MVP-informational?style=flat-square)
 ![Tech Stack](https://img.shields.io/badge/stack-FastAPI%2C%20Python-blue?style=flat-square)
@@ -11,7 +11,7 @@
 
 ## 🚀 Project Objective
 
-**Ladies Product Price Sorter** is a smart price comparison tool tailored specifically for fashion and cosmetic products for women in India.  
+**Product Price Sorter** is a price comparison tool tailored specifically for products in India.  
 It enables users to **search** for a product, **compare prices** across platforms like Amazon, Flipkart, Myntra, Nykaa, etc.
 
 ---
@@ -106,4 +106,5 @@ Working MVP with logs, error states, test data
 **Example**:
 ```bash
 curl "http://localhost:8000/api/search?q=lakme+lips&platforms=amazon,myntra&limit=3"
+
 
